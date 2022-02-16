@@ -1,15 +1,10 @@
 import mongoose from "mongoose";
+const { isValidObjectId } = mongoose;
 
-import productModel from "../models/product.js";
+import Products from "../models/product.js";
 
 export const getAllProducts = (req, res, next) => {
-  productModel
-    .find()
-    .where("hidden")
-    .ne(true)
-    .select("_id name price")
-    .sort("-updatedAt")
-    .exec()
+  Products.getAllProducts()
     .then((products) =>
       res.status(200).json({
         count: products.length,
@@ -26,46 +21,32 @@ export const getAllProducts = (req, res, next) => {
 
 export const getProductById = (req, res, next) => {
   const id = req.params.id;
-  productModel
-    .findById(id)
-    .where("hidden")
-    .ne(true)
-    .select("_id name price createdAt updatedAt")
-    .exec()
+  Products.getProductById(id)
     .then((product) => {
       if (product) {
         res.status(200).json(product);
       } else {
         res.status(404).json({
-          message: "No valid entry for provided id",
+          message: "Product not found",
         });
       }
     })
     .catch((error) => {
       console.log(error);
-      res.status(500).json({
-        error: error,
-      });
     });
 };
 
 export const createProduct = (req, res, next) => {
   const name = req.body.name;
   const price = req.body.price;
-  const product = new productModel({
-    _id: new mongoose.Types.ObjectId(),
-    name: name,
-    price: price,
-  });
-  product
-    .save()
-    .then((result) =>
+  Products.createProduct(name, price)
+    .then((product) => {
       res.status(201).json({
-        _id: result._id,
-        name: result.name,
-        price: result.price,
-      })
-    )
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+      });
+    })
     .catch((error) => {
       console.log(error);
       res.status(500).json(error);
@@ -74,18 +55,9 @@ export const createProduct = (req, res, next) => {
 
 export const updateProductById = (req, res, next) => {
   const id = req.params.id;
-  const updatedProduct = {};
-  for (const key of req.body) {
-    updatedProduct[key.propName] = key.value;
-  }
-  productModel
-    .findByIdAndUpdate(id, { $set: updatedProduct })
-    .exec()
+  Products.updateProductById(id, dict)
     .then(() => {
-      productModel
-        .findById(id)
-        .select("_id name price createdAt updatedAt")
-        .exec()
+      Products.getProductById(id)
         .then((product) => res.status(200).json(product))
         .catch((error) => {
           console.log(error);
@@ -102,14 +74,12 @@ export const updateProductById = (req, res, next) => {
 
 export const hideProductById = (req, res, next) => {
   const id = req.params.id;
-  productModel
-    .findByIdAndUpdate(id, { $set: { hidden: true } })
-    .exec()
-    .then(() =>
+  Products.softDeleteById(id)
+    .then(() => {
       res.status(200).json({
         message: "Deleted successfully",
-      })
-    )
+      });
+    })
     .catch((error) => {
       console.log(error);
       res.status(500).json({
