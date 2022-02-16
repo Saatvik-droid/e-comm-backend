@@ -2,15 +2,16 @@
   "name": "ecomm",
   "version": "1.0.0",
   "description": "Mock E-Commerce backend",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "nodemon",
     "test": ""
   },
   "author": "Saatvik Ramani",
   "license": "ISC",
+  "keywords": ["express", "mongoose"],
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
