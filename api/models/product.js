@@ -26,7 +26,7 @@ productSchema.statics.getAllProducts = function (cb) {
 };
 
 productSchema.statics.getProductById = function (id, cb) {
-  return Products.findById(id).omitDeleted().selectFieldsSingle().exec();
+  return Products.findById(id).selectFieldsSingle().exec();
 };
 
 productSchema.statics.createProduct = function (name, price, cb) {
@@ -66,7 +66,7 @@ productSchema.query.selectFieldsGrouped = function () {
 };
 
 productSchema.query.selectFieldsSingle = function () {
-  return this.select("_id name price createdAt updatedAt");
+  return this.select("_id name price deleted createdAt updatedAt");
 };
 
 const Products = mongoose.model("Products", productSchema);
