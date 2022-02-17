@@ -1,6 +1,3 @@
-import mongoose from "mongoose";
-const { isValidObjectId } = mongoose;
-
 import Products from "../models/product.js";
 
 export const getAllProducts = (req, res, next) => {
@@ -55,30 +52,54 @@ export const createProduct = (req, res, next) => {
 
 export const updateProductById = (req, res, next) => {
   const id = req.params.id;
-  Products.updateProductById(id, dict)
-    .then(() => {
-      Products.getProductById(id)
-        .then((product) => res.status(200).json(product))
-        .catch((error) => {
-          console.log(error);
-          res.status(500).json(error);
+  const dict = req.body;
+  Products.getProductById(id)
+    .then((product) => {
+      if (!product) {
+        return res.status(404).json({
+          message: "Product not found",
         });
+      } else {
+        product
+          .updateProduct(dict)
+          .then((updatedProduct) => {
+            res.status(200).json(updatedProduct);
+          })
+          .catch((error) => {
+            console.log(error);
+            res.status(500).json(error);
+          });
+      }
     })
     .catch((error) => {
       console.log(error);
-      res.status(500).json({
-        error: error,
-      });
+      res.status(500).json(error);
     });
 };
 
 export const hideProductById = (req, res, next) => {
   const id = req.params.id;
-  Products.softDeleteById(id)
-    .then(() => {
-      res.status(200).json({
-        message: "Deleted successfully",
-      });
+  Products.getProductById(id)
+    .then((product) => {
+      if (!product) {
+        return res.status(404).json({
+          message: "Product not found",
+        });
+      } else {
+        product
+          .softDelete()
+          .then(() => {
+            res.status(200).json({
+              message: "Deleted successfully",
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            res.status(500).json({
+              error: error,
+            });
+          });
+      }
     })
     .catch((error) => {
       console.log(error);

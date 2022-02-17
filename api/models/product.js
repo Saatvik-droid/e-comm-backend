@@ -17,16 +17,16 @@ const productSchema = mongoose.Schema(
 // Arrow functions explicitly prevent binding `this`.
 // https://mongoosejs.com/docs/guide.html#statics
 */
-productSchema.statics.getProductById = function (id, cb) {
-  return Products.findById(id).omitDeleted().selectFieldsSingle().exec();
-};
-
 productSchema.statics.getAllProducts = function (cb) {
   return Products.find()
     .omitDeleted()
     .selectFieldsGrouped()
     .sort("-updatedAt")
     .exec();
+};
+
+productSchema.statics.getProductById = function (id, cb) {
+  return Products.findById(id).omitDeleted().selectFieldsSingle().exec();
 };
 
 productSchema.statics.createProduct = function (name, price, cb) {
@@ -38,22 +38,23 @@ productSchema.statics.createProduct = function (name, price, cb) {
   return newProduct.save();
 };
 
-productSchema.statics.updateProductById = function (id, dict) {
+productSchema.methods.updateProduct = async function (dict, cb) {
   const updatedProduct = {};
   for (const pair of dict) {
     updatedProduct[pair.key] = pair.value;
   }
-  return Products.findByIdAndUpdate(id, { $set: updatedProduct }).exec();
+  await this.set(updatedProduct).save();
+  return this;
 };
 
-productSchema.statics.softDeleteById = function (id, cb) {
+productSchema.methods.softDelete = async function (id, cb) {
   const deleteDict = [
     {
       key: "deleted",
       value: true,
     },
   ];
-  return Products.updateProductById(id, deleteDict);
+  return await this.updateProduct(deleteDict);
 };
 
 productSchema.query.omitDeleted = function () {
