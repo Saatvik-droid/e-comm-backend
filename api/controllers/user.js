@@ -1,105 +1,126 @@
-import mongoose from "mongoose";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import Users from "../models/user.js";
 
-import userModel from "../models/user.js";
+export const getUserById = (req, res, next) => {
+  const id = req.params.id;
+  Users.getUserById(id)
+    .then((user) => {
+      if (!user) {
+        return res.status(404).json({
+          message: "User not found",
+        });
+      } else {
+        res.status(200).json({
+          _id: user._id,
+          username: user.username,
+          deleted: user.deleted,
+          createdAt: user.createdAt,
+        });
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      res.status(500).json(error);
+    });
+};
+
+export const getUserByUsername = (req, res, next) => {
+  const username = req.params.username;
+  Users.getUserByUsername(username).then((user) => {
+    res.status(200).json({
+      id: user._id,
+      username: user.username,
+      deleted: user.deleted,
+      createdAt: user.createdAt,
+    });
+  });
+};
 
 export const userSignUp = (req, res, next) => {
   const email = req.body.email;
   const plaintextPassword = req.body.password;
-
-  userModel
-    .find({ email: email })
-    .exec()
+  const username = req.body.username;
+  Users.getUserByEmail(email)
     .then((user) => {
-      if (user.length > 0) {
-        return res.status(409).json({
-          message: "Email already exists",
+      if (user) {
+        return res.status(401).json({
+          message: "Authorization failed",
         });
       } else {
-        bcrypt
-          .hash(plaintextPassword, 10)
+        Users.generateHashedPassword(plaintextPassword)
           .then((hashedPassword) => {
-            const user = new userModel({
-              _id: new mongoose.Types.ObjectId(),
-              email: email,
-              password: hashedPassword,
-            });
-            user
-              .save()
-              .then((user) => {
-                res.status(200).json({
-                  message: "User signed up successfully",
-                });
-              })
-              .catch((error) => {
-                console.log(error);
-                return res.status(500).json(error);
+            Users.signUp(email, hashedPassword, username).then((user) => {
+              res.status(201).json({
+                message: "User created successfully",
               });
+            });
           })
           .catch((error) => {
             console.log(error);
             res.status(500).json(error);
           });
       }
+    })
+    .catch((error) => {
+      console.log(error);
+      res.status(500).json(error);
     });
 };
 
 export const userSignIn = (req, res, next) => {
   const email = req.body.email;
   const plaintextPassword = req.body.password;
-  userModel
-    .findOne({ email: email })
-    .exec()
-    .then((user) => {
-      if (!user) {
-        return res.status(401).json({
-          message: "Autharization failed",
-        });
-      }
-      bcrypt
-        .compare(plaintextPassword, user.password)
+  Users.getUserByEmail(email).then((user) => {
+    if (!user) {
+      return res.status(401).json({
+        message: "Autharization failed",
+      });
+    } else {
+      user
+        .comparePassword(plaintextPassword)
         .then((result) => {
-          const jwtToken = jwt.sign(
-            {
-              email: user.email,
+          if (!result) {
+            return res.status(401).json({
+              message: "Autharization failed",
+            });
+          } else {
+            const token = user.generateJWT();
+            res.status(200).json({
+              message: "Autharization successfull",
               id: user._id,
-            },
-            process.env.JWT_KEY,
-            {
-              expiresIn: "1h",
+              token: token,
+            });
+            if (user.deleted) {
+              user.undoDeletion();
             }
-          );
-          res.status(200).json({
-            message: "Autharization successfull",
-            token: jwtToken,
-          });
+          }
         })
         .catch((error) => {
           console.log(error);
-          return res.status(401).json({
-            message: "Autharization failed",
-          });
+          res.status(500).json(error);
         });
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).json(error);
-    });
+    }
+  });
 };
 
 export const userDelete = (req, res, next) => {
   const id = req.params.id;
-  userModel
-    .findByIdAndDelete(id)
-    .exec()
-    .then((result) => {
-      res.status(200).json({
-        message: "User deleted",
+  Users.getUserById(id).then((user) => {
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
       });
-    })
-    .catch((error) => {
-      console.log(error);
-      res.status(500).json(error);
-    });
+    } else {
+      user
+        .softDelete()
+        .then((user) => {
+          res.status(200).json({
+            message: "User deleted successfully",
+          });
+        })
+        .catch((error) => {
+          console.log(error);
+          res.status(500).json(error);
+        });
+    }
+  });
 };
