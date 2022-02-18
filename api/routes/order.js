@@ -1,14 +1,14 @@
 import { Router } from "express";
 
 import * as orderController from "../controllers/order.js";
-import isValidObjectId from "../middleware/validateId.js";
+import { validateObjectId } from "../middleware/validator.js";
 
 const router = Router();
 
 router.get("/", orderController.getAllOrders);
-router.get("/:id", isValidObjectId, orderController.getOrderById);
+router.get("/:id", validateObjectId, orderController.getOrderById);
 router.post("/", orderController.createOrder);
-router.patch("/:id", isValidObjectId, orderController.updateOrderById);
-router.delete("/:id", isValidObjectId, orderController.cancelOrderById);
+router.patch("/:id", validateObjectId, orderController.updateOrderById);
+router.delete("/:id", validateObjectId, orderController.cancelOrderById);
 
 export default router;
