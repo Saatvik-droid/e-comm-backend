@@ -11,11 +11,15 @@
   },
   "author": "Saatvik Ramani",
   "license": "ISC",
-  "keywords": ["express", "mongoose"],
+  "keywords": [
+    "express",
+    "mongoose"
+  ],
   "dependencies": {
     "bcrypt": "^5.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
+    "email-validator": "^2.0.4",
     "express": "^4.17.2",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.2.1",
