@@ -1,21 +1,12 @@
-import mongoose from "mongoose";
-
-import orderModel from "../models/order.js";
-import productModel from "../models/product.js";
+import Orders from "../models/order.js";
+import Products from "../models/product.js";
 
 export const getAllOrders = (req, res, next) => {
-  orderModel
-    .find()
-    .where("cancelled")
-    .ne(true)
-    .select("id product quantity")
-    .populate("product", "_id name price")
-    .limit(5)
-    .exec()
-    .then((result) => {
+  Orders.getAllOrders()
+    .then((orders) => {
       res.status(200).json({
-        count: result.length,
-        orders: result,
+        count: orders.length,
+        orders: orders,
       });
     })
     .catch((error) => {
@@ -26,13 +17,15 @@ export const getAllOrders = (req, res, next) => {
 
 export const getOrderById = (req, res, next) => {
   const id = req.params.id;
-  orderModel
-    .findById(id)
-    .select("_id product quantity createdAt updatedAt")
-    .populate("product", "_id name price")
-    .exec()
+  Orders.getOrderById(id)
     .then((order) => {
-      res.status(200).json(order);
+      if (!order) {
+        return res.status(404).json({
+          message: "Order not found",
+        });
+      } else {
+        res.status(200).json(order);
+      }
     })
     .catch((error) => {
       console.log(error);
@@ -42,35 +35,26 @@ export const getOrderById = (req, res, next) => {
 
 export const createOrder = (req, res, next) => {
   const { productId, quantity } = req.body;
-  productModel
-    .findById(productId)
-    .where("hidden")
-    .ne(true)
-    .select("_id name price")
-    .exec()
+  Products.getProductById(productId)
     .then((product) => {
-      if (!product)
+      if (!product) {
         return res.status(404).json({
           message: "Product not found",
         });
-      const order = new orderModel({
-        _id: new mongoose.Types.ObjectId(),
-        product: productId,
-        quantity: quantity,
-      });
-      order
-        .save()
-        .then((result) => {
-          res.status(201).json({
-            _id: result._id,
-            product: product,
-            quantity: result.quantity,
+      } else {
+        Orders.createOrder(productId, quantity)
+          .then((order) => {
+            res.status(201).json({
+              _id: order._id,
+              product: product,
+              quantity: order.quantity,
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            res.status(500).json(error);
           });
-        })
-        .catch((error) => {
-          console.log(error);
-          res.status(500).json(error);
-        });
+      }
     })
     .catch((error) => {
       console.log(error);
@@ -78,40 +62,55 @@ export const createOrder = (req, res, next) => {
     });
 };
 
-export const updateOrderById = (req, res, next) => {
+export const updateOrderById = async (req, res, next) => {
   const id = req.params.id;
-  const updatedOrder = {};
-  for (const key of req.body) {
-    updatedOrder[key.propName] = key.value;
-  }
-  orderModel
-    .findByIdAndUpdate(id, { $set: updatedOrder })
-    .exec()
-    .then(() => {
-      orderModel
-        .findById(id)
-        .select("_id product quantity createdAt updatedAt")
-        .populate("product", "_id name price")
-        .exec()
-        .then((product) => res.status(200).json(product));
+  const dict = req.body;
+  Orders.getOrderById(id)
+    .then((order) => {
+      if (!order) {
+        return res.status(404).json({
+          message: "Order not found",
+        });
+      } else {
+        order
+          .updateOrder(dict)
+          .then((updatedOrder) => {
+            res.status(200).json(updatedOrder);
+          })
+          .catch((error) => {
+            console.log(error);
+            res.status(500).json(error);
+          });
+      }
     })
     .catch((error) => {
       console.log(error);
-      res.status(500).json({
-        error: error,
-      });
+      res.status(500).json(error);
     });
 };
 
 export const cancelOrderById = (req, res, next) => {
-  orderModel
-    .findByIdAndUpdate(req.params.id, { $set: { cancelled: true } })
-    .exec()
-    .then(() =>
-      res.status(200).json({
-        message: "Deleted successfully",
-      })
-    )
+  const id = req.params.id;
+  Orders.getOrderById(id)
+    .then((order) => {
+      if (!order) {
+        return res.status(404).json({
+          message: "Order not found",
+        });
+      } else {
+        order
+          .cancelOrder()
+          .then(() => {
+            res.status(200).json({
+              message: "Cancelled successfully",
+            });
+          })
+          .catch((error) => {
+            console.log(error);
+            res.status(500).json(error);
+          });
+      }
+    })
     .catch((error) => {
       console.log(error);
       res.status(500).json(error);
